@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
             .route("/paste", web::route().guard(guard::Post()).to(paste))
             .service(paste_id)
     })
-    .bind(("127.0.0.1", cfg.port.unwrap()))?
+    .bind((cfg.address.unwrap(), cfg.port.unwrap()))?
     .run()
     .await?;
 
