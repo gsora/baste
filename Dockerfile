@@ -1,47 +1,36 @@
-####################################################################################################
-## Builder
-####################################################################################################
-FROM rust:latest AS builder
+FROM rust:1.59 as builder
 
-RUN rustup target add x86_64-unknown-linux-musl
-RUN apt update && apt install -y musl-tools musl-dev
-RUN update-ca-certificates
+RUN USER=root cargo new --bin baste
+WORKDIR ./baste
+COPY ./Cargo.toml ./Cargo.toml
+RUN cargo build --release
+RUN rm src/*.rs
 
-# Create appuser
-ENV USER=baste
-ENV UID=10001
+ADD . ./
 
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    "${USER}"
+RUN rm ./target/release/deps/baste*
+RUN cargo build --release
 
 
-WORKDIR /baste
+FROM debian:bullseye-slim
+ARG APP=/usr/src/app
 
-COPY ./ .
+RUN apt-get update \
+    && apt-get install -y ca-certificates tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN cargo build --target x86_64-unknown-linux-musl --release
+ENV TZ=Etc/UTC \
+    APP_USER=appuser
 
-####################################################################################################
-## Final image
-####################################################################################################
-FROM alpine
+RUN groupadd $APP_USER \
+    && useradd -g $APP_USER $APP_USER \
+    && mkdir -p ${APP}
 
-# Import from builder.
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
+COPY --from=builder /baste/target/release/baste ${APP}/baste
 
-WORKDIR /baste
+RUN chown -R $APP_USER:$APP_USER ${APP}
 
-# Copy our build
-COPY --from=builder /baste/target/x86_64-unknown-linux-musl/release/baste ./
+USER $APP_USER
+WORKDIR ${APP}
 
-# Use an unprivileged user.
-USER baste:baste
-
-CMD ["/baste/baste"]
+CMD ["./baste"]
