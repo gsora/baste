@@ -13,6 +13,16 @@ use tokio;
 const SECRET_TOKEN_HEADER: &'static str = "X-Secret-Token";
 const MULTIPART_FIELD_NAME: &'static str = "baste_file";
 
+const BANNER: &'static str = "
+██████╗  █████╗ ███████╗████████╗███████╗
+██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔════╝
+██████╔╝███████║███████╗   ██║   █████╗  
+██╔══██╗██╔══██║╚════██║   ██║   ██╔══╝  
+██████╔╝██║  ██║███████║   ██║   ███████╗
+╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝
+                                         
+";
+
 #[tokio::main]
 async fn main() -> Result<()> {
     pretty_env_logger::init();
@@ -32,6 +42,7 @@ async fn main() -> Result<()> {
             .wrap(middleware::Logger::default())
             .route("/paste", web::route().guard(guard::Post()).to(paste))
             .service(paste_id)
+            .service(root)
     })
     .bind((cfg.address.unwrap(), cfg.port.unwrap()))?
     .run()
@@ -41,8 +52,13 @@ async fn main() -> Result<()> {
 }
 
 #[get("/")]
-async fn root() -> &'static str {
-    return "yoooo";
+async fn root() -> String {
+    let root_example = include_str!("../README.md");
+
+    let mut full_str = String::new();
+    full_str.push_str(BANNER);
+    full_str.push_str(root_example);
+    return full_str;
 }
 
 #[derive(Clone, Debug, Default)]
