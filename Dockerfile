@@ -19,21 +19,12 @@ RUN apt-get update \
     && apt-get install -y ca-certificates tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-ENV TZ=Etc/UTC \
-    APP_USER=appuser
+ENV TZ=Etc/UTC
 
-RUN groupadd $APP_USER \
-    && useradd -g $APP_USER $APP_USER \
-    && mkdir -p ${APP}
+RUN mkdir -p ${APP}
 
 COPY --from=builder /baste/target/release/baste ${APP}/baste
 
-RUN mkdir ${APP}/baste_storage
-RUN chown $APP_USER:$APP_USER ${APP}/baste_storage
-RUN chown -R $APP_USER:$APP_USER ${APP}
-
-
-USER $APP_USER
 WORKDIR ${APP}
 
 CMD ["./baste"]
