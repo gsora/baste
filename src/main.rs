@@ -1,4 +1,5 @@
 mod config;
+use actix_multipart::Multipart;
 use actix_web::*;
 use anyhow::{Context, Result};
 use chbs::prelude::*;
@@ -6,9 +7,11 @@ use chbs::probability::Probability;
 use futures::StreamExt;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::str;
 use tokio;
 
 const SECRET_TOKEN_HEADER: &'static str = "X-Secret-Token";
+const MULTIPART_FIELD_NAME: &'static str = "baste_file";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -65,7 +68,7 @@ async fn paste_id(
 
 pub async fn paste(
     data: web::Data<PasteManager>,
-    mut payload: web::Payload,
+    mut payload: Multipart,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     let secret_token = match req.headers().get(SECRET_TOKEN_HEADER) {
@@ -77,25 +80,24 @@ pub async fn paste(
         return Err(error::ErrorBadRequest("wrong token"));
     }
 
-    let mut body = web::BytesMut::new();
-    while let Some(chunk) = payload.next().await {
-        let chunk = chunk?;
-        body.extend_from_slice(&chunk);
+    while let Some(item) = payload.next().await {
+        let mut field = item?;
+        if !field.name().eq(MULTIPART_FIELD_NAME) {
+            continue;
+        }
+
+        while let Some(chunk) = field.next().await {
+            // just parse the first one
+            let phrase = match write_paste((&chunk.unwrap()).to_vec(), &data.storage_path) {
+                Ok(phrase) => phrase,
+                Err(error) => return Err(error::ErrorInternalServerError(error)),
+            };
+
+            return Ok(HttpResponse::Ok().body(phrase));
+        }
     }
 
-    let body = body.to_vec();
-    log::debug!("received paste: {:?}", String::from_utf8(body.clone()));
-
-    if body.len() == 0 {
-        return Err(error::ErrorBadRequest("paste cannot be empty"));
-    }
-
-    let phrase = match write_paste(body.to_vec(), &data.storage_path) {
-        Ok(phrase) => phrase,
-        Err(error) => return Err(error::ErrorInternalServerError(error)),
-    };
-
-    Ok(HttpResponse::Ok().body(phrase))
+    Err(error::ErrorBadRequest("no multipart found"))
 }
 
 fn phrase() -> String {
