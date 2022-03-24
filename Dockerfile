@@ -28,7 +28,10 @@ RUN groupadd $APP_USER \
 
 COPY --from=builder /baste/target/release/baste ${APP}/baste
 
+RUN mkdir ${APP}/baste_storage
+RUN chown $APP_USER:$APP_USER ${APP}/baste_storage
 RUN chown -R $APP_USER:$APP_USER ${APP}
+
 
 USER $APP_USER
 WORKDIR ${APP}
