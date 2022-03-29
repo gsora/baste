@@ -7,7 +7,7 @@ use chbs::probability::Probability;
 use futures::StreamExt;
 use std::io::{Read, Write};
 use std::path::Path;
-use std::str;
+use std::{str, vec};
 use tokio;
 
 const SECRET_TOKEN_HEADER: &'static str = "X-Secret-Token";
@@ -102,15 +102,18 @@ pub async fn paste(
             continue;
         }
 
-        while let Some(chunk) = field.next().await {
-            // just parse the first one
-            let phrase = match write_paste((&chunk.unwrap()).to_vec(), &data.storage_path) {
-                Ok(phrase) => phrase,
-                Err(error) => return Err(error::ErrorInternalServerError(error)),
-            };
+        let mut multipart_data = vec![];
 
-            return Ok(HttpResponse::Ok().body(phrase));
+        while let Some(chunk) = field.next().await {
+            multipart_data.append(&mut (&chunk.unwrap()).to_vec());
         }
+
+        let phrase = match write_paste(multipart_data, &data.storage_path) {
+            Ok(phrase) => phrase,
+            Err(error) => return Err(error::ErrorInternalServerError(error)),
+        };
+
+        return Ok(HttpResponse::Ok().body(phrase));
     }
 
     Err(error::ErrorBadRequest("no multipart found"))
