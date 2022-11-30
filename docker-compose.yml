@@ -1,11 +1,12 @@
 services:
   baste:
+    build: .
     container-name: baste
     port: 9950:9950
     user: 1001:1001
     volumes:
       - /home/services/baste/data:/tmp/baste_storage:z
     environment:
-      - BASTE_STORAGE_DIR: "/tmp/baste_storage"
-      - RUST_LOG: debug
-      - BASTE_ADDRESS: "0.0.0.0"
+      - BASTE_STORAGE_DIR="/tmp/baste_storage"
+      - RUST_LOG=debug
+      - BASTE_ADDRESS="0.0.0.0"
