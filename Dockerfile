@@ -27,4 +27,4 @@ COPY --from=builder /baste/target/release/baste ${APP}/baste
 
 WORKDIR ${APP}
 
-CMD ["./baste"]
+ENTRYPOINT ["./baste"]
