@@ -1,7 +1,7 @@
 services:
   baste:
     build: .
-    container-name: baste
+    container_name: baste
     ports:
       - 9950:9950
     user: 1001:1001
