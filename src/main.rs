@@ -37,6 +37,7 @@ async fn main() -> Result<()> {
             .app_data(web::Data::new(PasteManager {
                 secret_token: cfg.secret_token.clone(),
                 storage_path: cfg.storage_directory.clone().unwrap(),
+                base_url: cfg.base_url.clone().unwrap(),
             }))
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
@@ -65,6 +66,7 @@ async fn root() -> String {
 pub struct PasteManager {
     pub secret_token: String,
     pub storage_path: String,
+    pub base_url: String,
 }
 
 #[get("/{paste_id}")]
@@ -113,7 +115,7 @@ pub async fn paste(
             Err(error) => return Err(error::ErrorInternalServerError(error)),
         };
 
-        return Ok(HttpResponse::Ok().body(phrase));
+        return Ok(HttpResponse::Ok().body(format!("{}/{}", data.base_url, phrase)));
     }
 
     Err(error::ErrorBadRequest("no multipart found"))
